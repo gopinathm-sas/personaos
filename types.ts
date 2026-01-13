@@ -21,5 +21,5 @@ export interface UserStats {
   dailyCalorieGoal: number;
   dailyStepGoal: number;
   currentSteps: number;
-  waterIntakeOz: number;
+  waterIntakeMl: number;
 }

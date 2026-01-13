@@ -16,14 +16,14 @@ const INITIAL_STATS: UserStats = {
   dailyCalorieGoal: 2400,
   dailyStepGoal: 10000,
   currentSteps: 7432,
-  waterIntakeOz: 48
+  waterIntakeMl: 1200 // Initial 1.2 Liters
 };
 
-const WATER_GOAL = 80;
+const WATER_GOAL_ML = 2500; // 2.5 Liters daily goal (common in India)
 
 const INITIAL_FOODS: FoodEntry[] = [
-  { id: '1', name: 'Greek Yogurt w/ Berries', calories: 280, protein: 22, carbs: 18, fat: 4, timestamp: Date.now() - 14400000, mealType: MealType.BREAKFAST },
-  { id: '2', name: 'Black Coffee', calories: 5, protein: 0, carbs: 0, fat: 0, timestamp: Date.now() - 10800000, mealType: MealType.BREAKFAST },
+  { id: '1', name: 'Poha with Sprouts', calories: 320, protein: 12, carbs: 45, fat: 8, timestamp: Date.now() - 14400000, mealType: MealType.BREAKFAST },
+  { id: '2', name: 'Masala Chai (No Sugar)', calories: 45, protein: 2, carbs: 5, fat: 2, timestamp: Date.now() - 10800000, mealType: MealType.BREAKFAST },
 ];
 
 const Header: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
@@ -62,7 +62,7 @@ const App: React.FC = () => {
 
   const totalCalories = foods.reduce((acc, f) => acc + f.calories, 0);
   const calorieProgress = Math.min(totalCalories / stats.dailyCalorieGoal, 1);
-  const waterProgress = Math.min(stats.waterIntakeOz / WATER_GOAL, 1);
+  const waterProgress = Math.min(stats.waterIntakeMl / WATER_GOAL_ML, 1);
   const getMealTotal = (type: MealType) => foods.filter(f => f.mealType === type).reduce((acc, f) => acc + f.calories, 0);
 
   const startCamera = async () => {
@@ -130,9 +130,14 @@ const App: React.FC = () => {
     setActiveTab('food');
   };
 
-  const logWater = (oz: number) => {
+  const logWater = (ml: number) => {
     haptic.medium();
-    setStats(prev => ({ ...prev, waterIntakeOz: prev.waterIntakeOz + oz }));
+    setStats(prev => ({ ...prev, waterIntakeMl: prev.waterIntakeMl + ml }));
+  };
+
+  const formatWater = (ml: number) => {
+    if (ml >= 1000) return `${(ml / 1000).toFixed(1)} L`;
+    return `${ml} ml`;
   };
 
   return (
@@ -140,18 +145,18 @@ const App: React.FC = () => {
       <div className="flex-1 overflow-y-auto hide-scrollbar pb-32">
         {activeTab === 'health' && (
           <div className="p-5 space-y-6">
-            <Header title="Health" subtitle="Today" />
+            <Header title="Health" subtitle={new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} />
             <div className="bg-white rounded-[28px] p-8 shadow-sm border border-black/5 flex flex-col items-center">
-              <ProgressRing progress={calorieProgress} label={totalCalories.toString()} subLabel="Calories" size={180} />
+              <ProgressRing progress={calorieProgress} label={totalCalories.toString()} subLabel="kcal" size={180} />
               <div className="mt-8 grid grid-cols-3 gap-6 w-full text-center">
                 <div><p className="text-[10px] font-bold text-gray-400 uppercase">Steps</p><p className="text-lg font-bold">{stats.currentSteps}</p></div>
                 <div><p className="text-[10px] font-bold text-gray-400 uppercase">Goal</p><p className="text-lg font-bold">10k</p></div>
-                <div><p className="text-[10px] font-bold text-gray-400 uppercase">Stand</p><p className="text-lg font-bold">8h</p></div>
+                <div><p className="text-[10px] font-bold text-gray-400 uppercase">Active</p><p className="text-lg font-bold">45m</p></div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <SummaryCard icon="fa-shoe-prints" title="Steps" value={stats.currentSteps.toLocaleString()} color="#FF9500" />
-              <SummaryCard icon="fa-droplet" title="Water" value={`${stats.waterIntakeOz}oz`} color="#007AFF" onClick={() => setIsWaterModalOpen(true)} />
+              <SummaryCard icon="fa-shoe-prints" title="Steps" value={stats.currentSteps.toLocaleString('en-IN')} color="#FF9500" />
+              <SummaryCard icon="fa-droplet" title="Hydration" value={formatWater(stats.waterIntakeMl)} color="#007AFF" onClick={() => setIsWaterModalOpen(true)} />
             </div>
           </div>
         )}
@@ -159,20 +164,30 @@ const App: React.FC = () => {
         {activeTab === 'food' && (
           <div className="p-5 space-y-4">
             <Header title="Food Log" subtitle="Nutrients" />
-            {foods.map(food => (
-              <div key={food.id} className="bg-white p-4 rounded-2xl shadow-sm border border-black/5 flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-[17px]">{food.name}</p>
-                  <p className="text-xs text-gray-400 uppercase font-bold">{food.mealType}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-black text-xl">{food.calories}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">kcal</p>
-                </div>
+            {foods.length === 0 ? (
+              <div className="text-center py-20 opacity-30">
+                <i className="fa-solid fa-plate-wheat text-6xl mb-4"></i>
+                <p className="font-medium">No meals logged today</p>
               </div>
-            ))}
+            ) : (
+              foods.map(food => (
+                <div key={food.id} className="bg-white p-4 rounded-2xl shadow-sm border border-black/5 flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-[17px]">{food.name}</p>
+                    <div className="flex gap-2">
+                      <p className="text-[10px] text-gray-400 uppercase font-bold">{food.mealType}</p>
+                      <p className="text-[10px] text-gray-500 font-medium">P: {food.protein}g • C: {food.carbs}g • F: {food.fat}g</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-xl">{food.calories}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">kcal</p>
+                  </div>
+                </div>
+              ))
+            )}
             <button onClick={startCamera} className="w-full mt-6 py-5 bg-[#007AFF] text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-transform">
-              <i className="fa-solid fa-camera mr-2"></i> Scan Food
+              <i className="fa-solid fa-camera mr-2"></i> Scan Food with AI
             </button>
           </div>
         )}
@@ -182,7 +197,7 @@ const App: React.FC = () => {
             <Header title="Trends" />
             <div className="bg-white p-10 rounded-3xl border border-black/5 shadow-sm">
               <i className="fa-solid fa-chart-line text-4xl text-gray-200 mb-4"></i>
-              <p className="text-gray-500 font-medium">Daily insights will appear here as you log more data.</p>
+              <p className="text-gray-500 font-medium leading-relaxed">Daily insights for your health journey in India will appear here.</p>
             </div>
           </div>
         )}
@@ -194,14 +209,20 @@ const App: React.FC = () => {
           <div className="w-full max-w-md bg-white rounded-[32px] p-6 shadow-2xl relative animate-in slide-in-from-bottom-full duration-300">
              <div className="w-10 h-1 bg-black/10 rounded-full mx-auto mb-6"></div>
              <div className="flex flex-col items-center mb-6">
-                <ProgressRing progress={waterProgress} label={stats.waterIntakeOz.toString()} subLabel="oz" size={140} color="#007AFF" />
+                <ProgressRing progress={waterProgress} label={formatWater(stats.waterIntakeMl)} subLabel="Logged" size={140} color="#007AFF" />
+                <p className="text-gray-400 font-bold text-xs mt-4 uppercase">Goal: {formatWater(WATER_GOAL_ML)}</p>
              </div>
-             <div className="grid grid-cols-3 gap-3 mb-6">
-                {[8, 12, 16, 24, 32].map(oz => (
-                  <button key={oz} onClick={() => logWater(oz)} className="bg-[#F2F2F7] py-4 rounded-xl font-bold text-[#007AFF] active:bg-gray-200">+{oz}</button>
+             <div className="grid grid-cols-4 gap-2 mb-6">
+                {[200, 300, 500, 1000].map(ml => (
+                  <button key={ml} onClick={() => logWater(ml)} className="bg-[#F2F2F7] py-4 rounded-xl font-bold text-[#007AFF] active:bg-gray-200 text-sm">
+                    +{ml < 1000 ? ml : '1L'}
+                  </button>
                 ))}
              </div>
-             <button onClick={() => setIsWaterModalOpen(false)} className="w-full py-4 bg-[#007AFF] text-white rounded-xl font-bold">Done</button>
+             <div className="flex gap-2">
+                <button onClick={() => setStats(prev => ({...prev, waterIntakeMl: 0}))} className="flex-1 py-4 bg-red-50 text-red-500 rounded-xl font-bold text-sm">Reset</button>
+                <button onClick={() => setIsWaterModalOpen(false)} className="flex-[2] py-4 bg-[#007AFF] text-white rounded-xl font-bold">Done</button>
+             </div>
           </div>
         </div>
       )}
@@ -211,6 +232,11 @@ const App: React.FC = () => {
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setPendingFood(null)}></div>
           <div className="w-full max-w-md bg-white rounded-[32px] p-6 shadow-2xl relative animate-in slide-in-from-bottom-full duration-300">
              <h2 className="text-xl font-bold text-center mb-6">Log {pendingFood.name}?</h2>
+             <div className="bg-[#F2F2F7] p-4 rounded-2xl mb-6 grid grid-cols-3 gap-2 text-center">
+                <div><p className="text-[10px] font-bold text-gray-400 uppercase">Prot</p><p className="font-bold">{pendingFood.protein}g</p></div>
+                <div><p className="text-[10px] font-bold text-gray-400 uppercase">Carb</p><p className="font-bold">{pendingFood.carbs}g</p></div>
+                <div><p className="text-[10px] font-bold text-gray-400 uppercase">Fat</p><p className="font-bold">{pendingFood.fat}g</p></div>
+             </div>
              <div className="grid grid-cols-2 gap-3 mb-6">
                 {Object.values(MealType).map(m => (
                   <button key={m} onClick={() => finalizeEntry(m)} className="bg-[#F2F2F7] py-4 rounded-xl font-bold active:bg-gray-200">{m}</button>
@@ -233,7 +259,13 @@ const App: React.FC = () => {
               <div className={`w-16 h-16 rounded-full ${isProcessing ? 'bg-gray-400' : 'bg-white animate-pulse'}`}></div>
             </button>
           </div>
-          {isProcessing && <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white font-bold"><p>AI Analysis...</p></div>}
+          {isProcessing && (
+            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white font-bold p-10 text-center">
+              <div className="w-12 h-12 border-4 border-[#007AFF] border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-lg">Analyzing food with Gemini AI...</p>
+              <p className="text-xs text-white/50 mt-2">Identifying local Indian ingredients...</p>
+            </div>
+          )}
         </div>
       )}
 
