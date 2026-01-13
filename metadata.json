@@ -1,0 +1,7 @@
+{
+  "name": "PersonaOS",
+  "description": "A personal operating system app for consolidated life tracking, focusing on Health and Food monitoring with an Apple-inspired aesthetic.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
